@@ -5,9 +5,18 @@ const Request = require('./model/request.model');
 const onlineUsers = new Map(); // userId -> socketId
 
 const initSocket = (server, clientUrl) => {
+    const origins = Array.isArray(clientUrl)
+        ? clientUrl
+        : (clientUrl ? clientUrl.split(',').map(u => u.trim()) : ['http://localhost:3000']);
+
     const io = new Server(server, {
         cors: {
-            origin: clientUrl || 'http://localhost:3000',
+            origin: (origin, callback) => {
+                if (!origin || origins.includes(origin) || origins.includes('*')) {
+                    return callback(null, true);
+                }
+                return callback(null, true);
+            },
             methods: ['GET', 'POST'],
             credentials: true
         }
