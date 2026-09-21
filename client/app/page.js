@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import AuthForm from '../components/AuthForm';
 import ChatDashboard from '../components/ChatDashboard';
@@ -8,6 +8,30 @@ import { useAuth } from '../context/AuthContext';
 
 export default function Home() {
     const { user, loading } = useAuth();
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    // Prevent React hydration mismatch between SSR and client state
+    if (!mounted) {
+        return (
+            <div className="app-container">
+                <div className="bg-mesh">
+                    <div className="glow-orb-1"></div>
+                    <div className="glow-orb-2"></div>
+                    <div className="glow-orb-3"></div>
+                </div>
+                <main className="main-content">
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', paddingTop: '4rem' }}>
+                        <div className="spinner" style={{ width: '36px', height: '36px', borderWidth: '3px' }}></div>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Loading application...</p>
+                    </div>
+                </main>
+            </div>
+        );
+    }
 
     return (
         <div className="app-container">

@@ -104,19 +104,10 @@ export const logoutUser = createAsyncThunk(
     }
 );
 
-const getInitialToken = () => {
-    if (typeof window !== 'undefined') {
-        return localStorage.getItem('token');
-    }
-    return null;
-};
-
-const initialToken = getInitialToken();
-
 const initialState = {
     user: null,
-    token: initialToken,
-    loading: !!initialToken,
+    token: null,
+    loading: false,
     serverStatus: 'checking',
     error: null
 };
