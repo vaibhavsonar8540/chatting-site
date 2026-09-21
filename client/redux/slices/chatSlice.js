@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://chatting-site-4iv8.onrender.com/api';
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://chatting-site-4iv8.onrender.com/api').replace(/\/+$/, '');
 
 // Async Thunks
 export const fetchUsers = createAsyncThunk(

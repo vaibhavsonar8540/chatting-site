@@ -5,18 +5,53 @@ const Request = require('./model/request.model');
 const onlineUsers = new Map(); // userId -> socketId
 
 const initSocket = (server, clientUrl) => {
-    const origins = Array.isArray(clientUrl)
+    const defaults = [
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'https://chatting-sitee.vercel.app'
+    ];
+
+    const rawList = Array.isArray(clientUrl)
         ? clientUrl
-        : (clientUrl ? clientUrl.split(',').map(u => u.trim()) : ['http://localhost:3000']);
+        : (clientUrl ? clientUrl.split(',').map(u => u.trim()).filter(Boolean) : defaults);
+
+    const originsSet = new Set(defaults);
+    rawList.forEach(item => {
+        originsSet.add(item);
+        originsSet.add(item.replace(/\/+$/, ''));
+        if (!item.startsWith('http://') && !item.startsWith('https://')) {
+            originsSet.add(`https://${item.replace(/\/+$/, '')}`);
+            originsSet.add(`http://${item.replace(/\/+$/, '')}`);
+        }
+    });
+
+    const allowedOrigins = Array.from(originsSet);
+
+    const validateCorsOrigin = (origin, callback) => {
+        if (!origin) return callback(null, true);
+
+        const cleanOrigin = origin.replace(/\/+$/, '');
+
+        const isMatch = allowedOrigins.some(item => {
+            if (item === '*') return true;
+            const cleanItem = item.replace(/\/+$/, '');
+            if (cleanOrigin === cleanItem) return true;
+            const originHost = cleanOrigin.replace(/^https?:\/\//, '');
+            const itemHost = cleanItem.replace(/^https?:\/\//, '');
+            return originHost === itemHost;
+        }) || cleanOrigin.endsWith('.vercel.app') || cleanOrigin.includes('localhost') || cleanOrigin.includes('127.0.0.1');
+
+        if (isMatch) {
+            return callback(null, true);
+        }
+
+        console.warn(`⚠️ Socket CORS blocked origin: ${origin}`);
+        return callback(new Error(`Socket CORS blocked origin: ${origin}`));
+    };
 
     const io = new Server(server, {
         cors: {
-            origin: (origin, callback) => {
-                if (!origin || origins.includes(origin) || origins.includes('*')) {
-                    return callback(null, true);
-                }
-                return callback(new Error('Not allowed by CORS'));
-            },
+            origin: validateCorsOrigin,
             methods: ['GET', 'POST'],
             credentials: true
         }

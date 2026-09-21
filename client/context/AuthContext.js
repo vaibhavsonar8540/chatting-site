@@ -7,7 +7,8 @@ import {
     loginUser, 
     registerUser, 
     logoutUser, 
-    checkServerHealth 
+    checkServerHealth,
+    setLoading
 } from '../redux/slices/authSlice';
 
 const AuthContext = createContext();
@@ -18,9 +19,11 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         dispatch(checkServerHealth());
-        const storedToken = localStorage.getItem('token');
+        const storedToken = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
         if (storedToken) {
             dispatch(fetchUserProfile(storedToken));
+        } else {
+            dispatch(setLoading(false));
         }
 
         const healthInterval = setInterval(() => {

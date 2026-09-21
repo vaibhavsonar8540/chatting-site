@@ -14,7 +14,7 @@ import {
 
 const SocketContext = createContext();
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://chatting-site-4iv8.onrender.com';
+const SOCKET_URL = (process.env.NEXT_PUBLIC_SOCKET_URL || 'https://chatting-site-4iv8.onrender.com').replace(/\/+$/, '');
 
 export const SocketProvider = ({ children }) => {
     const dispatch = useDispatch();

@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://chatting-site-4iv8.onrender.com/api';
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://chatting-site-4iv8.onrender.com/api').replace(/\/+$/, '');
 
 // Async Thunks
 export const checkServerHealth = createAsyncThunk(
@@ -31,7 +31,7 @@ export const fetchUserProfile = createAsyncThunk(
             if (res.ok && data.success) {
                 return data.user;
             } else {
-                localStorage.removeItem('token');
+                if (typeof window !== 'undefined') localStorage.removeItem('token');
                 return rejectWithValue(data.message || 'Session expired');
             }
         } catch (err) {
@@ -55,7 +55,7 @@ export const registerUser = createAsyncThunk(
                 return rejectWithValue(data.message || 'Registration failed');
             }
 
-            if (data.token) {
+            if (data.token && typeof window !== 'undefined') {
                 localStorage.setItem('token', data.token);
             }
             return data;
@@ -80,7 +80,7 @@ export const loginUser = createAsyncThunk(
                 return rejectWithValue(data.message || 'Login failed');
             }
 
-            if (data.token) {
+            if (data.token && typeof window !== 'undefined') {
                 localStorage.setItem('token', data.token);
             }
             return data;
@@ -98,16 +98,25 @@ export const logoutUser = createAsyncThunk(
         } catch (err) {
             // Ignore fetch errors during logout
         } finally {
-            localStorage.removeItem('token');
+            if (typeof window !== 'undefined') localStorage.removeItem('token');
         }
         return null;
     }
 );
 
+const getInitialToken = () => {
+    if (typeof window !== 'undefined') {
+        return localStorage.getItem('token');
+    }
+    return null;
+};
+
+const initialToken = getInitialToken();
+
 const initialState = {
     user: null,
-    token: typeof window !== 'undefined' ? localStorage.getItem('token') : null,
-    loading: true,
+    token: initialToken,
+    loading: !!initialToken,
     serverStatus: 'checking',
     error: null
 };
@@ -119,6 +128,9 @@ const authSlice = createSlice({
         setToken: (state, action) => {
             state.token = action.payload;
         },
+        setLoading: (state, action) => {
+            state.loading = action.payload;
+        },
         clearError: (state) => {
             state.error = null;
         }
@@ -127,6 +139,9 @@ const authSlice = createSlice({
         // Health Check
         builder.addCase(checkServerHealth.fulfilled, (state, action) => {
             state.serverStatus = action.payload;
+        });
+        builder.addCase(checkServerHealth.rejected, (state) => {
+            state.serverStatus = 'offline';
         });
 
         // Fetch User Profile
@@ -147,9 +162,11 @@ const authSlice = createSlice({
         builder.addCase(registerUser.fulfilled, (state, action) => {
             state.user = action.payload.user;
             state.token = action.payload.token;
+            state.loading = false;
             state.error = null;
         });
         builder.addCase(registerUser.rejected, (state, action) => {
+            state.loading = false;
             state.error = action.payload;
         });
 
@@ -157,9 +174,11 @@ const authSlice = createSlice({
         builder.addCase(loginUser.fulfilled, (state, action) => {
             state.user = action.payload.user;
             state.token = action.payload.token;
+            state.loading = false;
             state.error = null;
         });
         builder.addCase(loginUser.rejected, (state, action) => {
+            state.loading = false;
             state.error = action.payload;
         });
 
@@ -172,5 +191,5 @@ const authSlice = createSlice({
     }
 });
 
-export const { setToken, clearError } = authSlice.actions;
+export const { setToken, setLoading, clearError } = authSlice.actions;
 export default authSlice.reducer;
