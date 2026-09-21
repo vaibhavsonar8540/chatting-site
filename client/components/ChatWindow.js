@@ -48,6 +48,17 @@ export default function ChatWindow({
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isTyping]);
 
+    // Handle Escape key to go back to chat list
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                onBackToList();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [onBackToList]);
+
     // Handle typing events
     const handleTextChange = (e) => {
         setText(e.target.value);
@@ -134,32 +145,40 @@ export default function ChatWindow({
         <div className="chat-window">
             {/* Top Bar Header */}
             <div className="chat-header">
-                <div 
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', cursor: 'pointer' }}
-                    onClick={() => onOpenProfile && onOpenProfile(activeUser)}
-                    title="View user profile"
-                >
-                    <button className="mobile-back-btn" onClick={(e) => { e.stopPropagation(); onBackToList(); }} title="Back to conversations">
-                        <ArrowLeft size={20} />
+                <div className="header-left">
+                    <button 
+                        className="chat-back-btn" 
+                        onClick={(e) => { e.stopPropagation(); onBackToList(); }} 
+                        title="Back to chat list (Esc)"
+                        aria-label="Back to conversations"
+                    >
+                        <ArrowLeft size={18} />
+                        <span className="back-btn-text">Back</span>
                     </button>
 
-                    <div className="user-avatar-container">
-                        <div className="user-avatar">
-                            {getFirstLetter(activeUser.username)}
+                    <div 
+                        className="header-user-info"
+                        onClick={() => onOpenProfile && onOpenProfile(activeUser)}
+                        title="View user profile"
+                    >
+                        <div className="user-avatar-container">
+                            <div className="user-avatar">
+                                {getFirstLetter(activeUser.username)}
+                            </div>
+                            <span className={`status-indicator ${isOnline ? 'online' : 'offline'}`}></span>
                         </div>
-                        <span className={`status-indicator ${isOnline ? 'online' : 'offline'}`}></span>
-                    </div>
 
-                    <div>
-                        <div className="chat-username">
-                            {activeUser.username}
-                        </div>
-                        <div className="chat-status-subtitle">
-                            {isOnline ? (
-                                <span className="online-text">Online</span>
-                            ) : (
-                                <span className="offline-text">Offline</span>
-                            )}
+                        <div>
+                            <div className="chat-username">
+                                {activeUser.username}
+                            </div>
+                            <div className="chat-status-subtitle">
+                                {isOnline ? (
+                                    <span className="online-text">Online</span>
+                                ) : (
+                                    <span className="offline-text">Offline</span>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
