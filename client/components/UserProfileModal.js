@@ -30,7 +30,9 @@ export default function UserProfileModal({
 }) {
     if (!targetUser) return null;
 
-    const isSelf = targetUser._id === currentUser?.id || targetUser._id === currentUser?._id;
+    const targetIdStr = String(targetUser._id || targetUser.id || '');
+    const currentIdStr = String(currentUser?.id || currentUser?._id || '');
+    const isSelf = targetIdStr && currentIdStr && targetIdStr === currentIdStr;
     const requestStatus = targetUser.requestStatus || 'none';
     const getFirstLetter = (name) => (name ? name.charAt(0).toUpperCase() : 'U');
 

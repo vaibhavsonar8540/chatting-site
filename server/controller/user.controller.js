@@ -9,7 +9,7 @@ const Message = require('../model/message.model');
  */
 const getUsersList = async (req, res) => {
     try {
-        const currentUserId = req.user.id;
+        const currentUserId = req.user._id ? req.user._id.toString() : req.user.id.toString();
 
         // Fetch all other users
         const users = await User.find({ _id: { $ne: currentUserId } })
@@ -37,7 +37,7 @@ const getUsersList = async (req, res) => {
                 );
 
                 if (reqObj) {
-                    requestId = reqObj._id;
+                    requestId = reqObj._id.toString();
                     if (reqObj.status === 'accepted') {
                         requestStatus = 'accepted';
                     } else if (reqObj.status === 'rejected') {
@@ -67,7 +67,7 @@ const getUsersList = async (req, res) => {
                 });
 
                 return {
-                    _id: u._id,
+                    _id: u._id.toString(),
                     username: u.username,
                     email: u.email,
                     createdAt: u.createdAt,
@@ -75,7 +75,7 @@ const getUsersList = async (req, res) => {
                     requestId,
                     lastMessage: lastMessage ? {
                         text: lastMessage.text,
-                        sender: lastMessage.sender,
+                        sender: lastMessage.sender.toString(),
                         createdAt: lastMessage.createdAt,
                         read: lastMessage.read
                     } : null,
@@ -105,7 +105,7 @@ const getUsersList = async (req, res) => {
 const searchUsers = async (req, res) => {
     try {
         const { q } = req.query;
-        const currentUserId = req.user.id;
+        const currentUserId = req.user._id ? req.user._id.toString() : req.user.id.toString();
 
         if (!q || !q.trim()) {
             return res.status(200).json({ success: true, users: [] });
@@ -117,9 +117,43 @@ const searchUsers = async (req, res) => {
             $or: [{ username: regex }, { email: regex }]
         }).select('-password');
 
+        const requests = await Request.find({
+            $or: [{ sender: currentUserId }, { receiver: currentUserId }]
+        });
+
+        const usersWithDetails = users.map((u) => {
+            const userIdStr = u._id.toString();
+            let requestStatus = 'none';
+            let requestId = null;
+
+            const reqObj = requests.find(
+                (r) =>
+                    (r.sender.toString() === currentUserId && r.receiver.toString() === userIdStr) ||
+                    (r.sender.toString() === userIdStr && r.receiver.toString() === currentUserId)
+            );
+
+            if (reqObj) {
+                requestId = reqObj._id.toString();
+                if (reqObj.status === 'accepted') requestStatus = 'accepted';
+                else if (reqObj.status === 'rejected') requestStatus = 'rejected';
+                else if (reqObj.status === 'pending') {
+                    requestStatus = reqObj.sender.toString() === currentUserId ? 'pending_sent' : 'pending_received';
+                }
+            }
+
+            return {
+                _id: u._id.toString(),
+                username: u.username,
+                email: u.email,
+                createdAt: u.createdAt,
+                requestStatus,
+                requestId
+            };
+        });
+
         return res.status(200).json({
             success: true,
-            users
+            users: usersWithDetails
         });
     } catch (error) {
         console.error('Search users error:', error);

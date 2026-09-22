@@ -41,7 +41,9 @@ export default function ChatWindow({
     const messagesEndRef = useRef(null);
     const typingTimeoutRef = useRef(null);
 
-    const isOnline = activeUser ? onlineUsers.includes(activeUser._id) : false;
+    const activeUserIdStr = activeUser ? String(activeUser._id || activeUser.id) : '';
+    const currentUserIdStr = currentUser ? String(currentUser.id || currentUser._id) : '';
+    const isOnline = activeUserIdStr ? (onlineUsers || []).map(String).includes(activeUserIdStr) : false;
 
     // Scroll to bottom when messages update
     useEffect(() => {
@@ -66,13 +68,13 @@ export default function ChatWindow({
         if (!socket || !activeUser) return;
 
         if (!isTyping) {
-            socket.emit('typing', { senderId: currentUser.id, receiverId: activeUser._id });
+            socket.emit('typing', { senderId: currentUserIdStr, receiverId: activeUserIdStr });
         }
 
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
         typingTimeoutRef.current = setTimeout(() => {
-            socket.emit('stop_typing', { senderId: currentUser.id, receiverId: activeUser._id });
+            socket.emit('stop_typing', { senderId: currentUserIdStr, receiverId: activeUserIdStr });
         }, 2000);
     };
 
@@ -85,7 +87,7 @@ export default function ChatWindow({
         setShowEmojiPicker(false);
 
         if (socket && activeUser) {
-            socket.emit('stop_typing', { senderId: currentUser.id, receiverId: activeUser._id });
+            socket.emit('stop_typing', { senderId: currentUserIdStr, receiverId: activeUserIdStr });
         }
     };
 
@@ -268,7 +270,8 @@ export default function ChatWindow({
                     </div>
                 ) : (
                     messages.map((msg, idx) => {
-                        const isSender = msg.sender === currentUser.id || msg.sender?._id === currentUser.id;
+                        const msgSenderIdStr = String(typeof msg.sender === 'object' ? (msg.sender._id || msg.sender.id) : msg.sender);
+                        const isSender = msgSenderIdStr === currentUserIdStr;
                         const msgTime = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
                         return (

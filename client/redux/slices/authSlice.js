@@ -1,6 +1,16 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://chatting-site-4iv8.onrender.com/api').replace(/\/+$/, '');
+const getApiBaseUrl = () => {
+    if (process.env.NEXT_PUBLIC_API_URL) {
+        return process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, '');
+    }
+    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+        return 'http://localhost:5000/api';
+    }
+    return 'https://chatting-site-4iv8.onrender.com/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Async Thunks
 export const checkServerHealth = createAsyncThunk(
@@ -141,6 +151,7 @@ const authSlice = createSlice({
         });
         builder.addCase(fetchUserProfile.fulfilled, (state, action) => {
             state.user = action.payload;
+            state.token = action.meta.arg;
             state.loading = false;
         });
         builder.addCase(fetchUserProfile.rejected, (state) => {

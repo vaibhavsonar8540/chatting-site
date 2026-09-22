@@ -14,7 +14,17 @@ import {
 
 const SocketContext = createContext();
 
-const SOCKET_URL = (process.env.NEXT_PUBLIC_SOCKET_URL || 'https://chatting-site-4iv8.onrender.com').replace(/\/+$/, '');
+const getSocketUrl = () => {
+    if (process.env.NEXT_PUBLIC_SOCKET_URL) {
+        return process.env.NEXT_PUBLIC_SOCKET_URL.replace(/\/+$/, '');
+    }
+    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+        return 'http://localhost:5000';
+    }
+    return 'https://chatting-site-4iv8.onrender.com';
+};
+
+const SOCKET_URL = getSocketUrl();
 
 export const SocketProvider = ({ children }) => {
     const dispatch = useDispatch();

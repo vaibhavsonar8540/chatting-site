@@ -156,7 +156,27 @@ export default function ChatSidebar({
                         <div className="no-users-found">
                             <Users size={32} style={{ color: 'var(--text-subtle)' }} />
                             {searchQuery ? (
-                                <p>No connected friends match "{searchQuery}".</p>
+                                <>
+                                    <p style={{ fontWeight: 600 }}>No connected friends match "{searchQuery}"</p>
+                                    {filteredDiscoverUsers.length > 0 ? (
+                                        <div style={{ marginTop: '0.75rem', width: '100%', textAlign: 'center' }}>
+                                            <p style={{ fontSize: '0.82rem', color: 'var(--text-subtle)', marginBottom: '0.5rem' }}>
+                                                Found {filteredDiscoverUsers.length} registered user(s) in Discover
+                                            </p>
+                                            <button 
+                                                onClick={() => setActiveTab('discover')}
+                                                className="btn-primary"
+                                                style={{ width: 'auto', padding: '0.45rem 1rem', fontSize: '0.82rem', margin: '0 auto' }}
+                                            >
+                                                <Compass size={14} /> View Registered Users ({filteredDiscoverUsers.length})
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <p style={{ fontSize: '0.82rem', color: 'var(--text-subtle)', marginTop: '0.25rem' }}>
+                                            No registered users found matching "{searchQuery}".
+                                        </p>
+                                    )}
+                                </>
                             ) : (
                                 <>
                                     <p style={{ fontWeight: 700, color: 'var(--text-main)' }}>No Connected Friends Yet</p>
@@ -173,8 +193,10 @@ export default function ChatSidebar({
                         </div>
                     ) : (
                         filteredFriends.map((u) => {
-                            const isSelected = activeUser?._id === u._id;
-                            const isOnline = onlineUsers.includes(u._id);
+                            const uIdStr = String(u._id || u.id);
+                            const activeIdStr = activeUser ? String(activeUser._id || activeUser.id) : null;
+                            const isSelected = activeIdStr === uIdStr;
+                            const isOnline = (onlineUsers || []).map(String).includes(uIdStr);
 
                             let formattedTime = '';
                             if (u.lastMessage?.createdAt) {
@@ -184,7 +206,7 @@ export default function ChatSidebar({
 
                             return (
                                 <div
-                                    key={u._id}
+                                    key={uIdStr}
                                     onClick={() => onSelectUser(u)}
                                     className={`user-item ${isSelected ? 'active' : ''}`}
                                 >
@@ -211,7 +233,7 @@ export default function ChatSidebar({
                                         <div className="user-item-preview">
                                             {u.lastMessage ? (
                                                 <span className="preview-text">
-                                                    {u.lastMessage.sender === currentUser.id ? 'You: ' : ''}
+                                                    {String(u.lastMessage.sender) === String(currentUser?.id || currentUser?._id) ? 'You: ' : ''}
                                                     {u.lastMessage.text}
                                                 </span>
                                             ) : (
@@ -255,12 +277,13 @@ export default function ChatSidebar({
                         </div>
                     ) : (
                         filteredDiscoverUsers.map((u) => {
-                            const isOnline = onlineUsers.includes(u._id);
+                            const uIdStr = String(u._id || u.id);
+                            const isOnline = (onlineUsers || []).map(String).includes(uIdStr);
                             const requestStatus = u.requestStatus || 'none';
 
                             return (
                                 <div 
-                                    key={u._id} 
+                                    key={uIdStr} 
                                     className="user-item discover-user-item"
                                     onClick={() => onSelectUser(u)}
                                 >

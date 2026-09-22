@@ -1,6 +1,16 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://chatting-site-4iv8.onrender.com/api').replace(/\/+$/, '');
+const getApiBaseUrl = () => {
+    if (process.env.NEXT_PUBLIC_API_URL) {
+        return process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, '');
+    }
+    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+        return 'http://localhost:5000/api';
+    }
+    return 'https://chatting-site-4iv8.onrender.com/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Async Thunks
 export const fetchUsers = createAsyncThunk(
@@ -181,8 +191,9 @@ const chatSlice = createSlice({
         setActiveUser: (state, action) => {
             state.activeUser = action.payload;
             if (action.payload) {
+                const selId = String(action.payload._id || action.payload.id);
                 state.users = state.users.map((u) =>
-                    u._id === action.payload._id ? { ...u, unreadCount: 0 } : u
+                    String(u._id || u.id) === selId ? { ...u, unreadCount: 0 } : u
                 );
             }
         },
@@ -197,27 +208,33 @@ const chatSlice = createSlice({
         },
         receiveMessage: (state, action) => {
             const formattedMsg = action.payload;
-            const activeUser = state.activeUser;
+            if (!formattedMsg) return;
 
-            const isRelevant = activeUser && (formattedMsg.sender === activeUser._id || formattedMsg.receiver === activeUser._id);
+            const senderId = String(typeof formattedMsg.sender === 'object' ? (formattedMsg.sender._id || formattedMsg.sender.id) : formattedMsg.sender);
+            const receiverId = String(typeof formattedMsg.receiver === 'object' ? (formattedMsg.receiver._id || formattedMsg.receiver.id) : formattedMsg.receiver);
+            const activeUserId = state.activeUser ? String(state.activeUser._id || state.activeUser.id) : null;
+
+            const isRelevant = activeUserId && (senderId === activeUserId || receiverId === activeUserId);
+
             if (isRelevant) {
-                const exists = state.messages.some((m) => m._id === formattedMsg._id);
+                const exists = state.messages.some((m) => String(m._id) === String(formattedMsg._id));
                 if (!exists) {
                     state.messages.push(formattedMsg);
                 }
             }
 
             state.users = state.users.map((u) => {
-                const isOtherUser = u._id === formattedMsg.sender || u._id === formattedMsg.receiver;
+                const uId = String(u._id || u.id);
+                const isOtherUser = uId === senderId || uId === receiverId;
                 if (isOtherUser) {
-                    const isSender = formattedMsg.sender === u._id;
-                    const shouldIncrement = isSender && (!activeUser || activeUser._id !== u._id);
+                    const isSender = senderId === uId;
+                    const shouldIncrement = isSender && activeUserId !== uId;
 
                     return {
                         ...u,
                         lastMessage: {
                             text: formattedMsg.text,
-                            sender: formattedMsg.sender,
+                            sender: senderId,
                             createdAt: formattedMsg.createdAt
                         },
                         unreadCount: shouldIncrement ? (u.unreadCount || 0) + 1 : u.unreadCount
@@ -227,15 +244,29 @@ const chatSlice = createSlice({
             });
         },
         updateActiveUserRequestStatus: (state, action) => {
-            if (state.activeUser && state.activeUser._id === action.payload.targetUserId) {
-                state.activeUser.requestStatus = action.payload.status;
+            const { targetUserId, status } = action.payload;
+            if (!targetUserId) return;
+            const tId = String(targetUserId);
+
+            if (state.activeUser && String(state.activeUser._id || state.activeUser.id) === tId) {
+                state.activeUser = { ...state.activeUser, requestStatus: status };
             }
+            state.users = state.users.map((u) =>
+                String(u._id || u.id) === tId ? { ...u, requestStatus: status } : u
+            );
         }
     },
     extraReducers: (builder) => {
         // fetchUsers
         builder.addCase(fetchUsers.fulfilled, (state, action) => {
-            state.users = action.payload;
+            state.users = action.payload || [];
+            if (state.activeUser) {
+                const activeId = String(state.activeUser._id || state.activeUser.id);
+                const updatedActive = (action.payload || []).find((u) => String(u._id || u.id) === activeId);
+                if (updatedActive) {
+                    state.activeUser = { ...state.activeUser, ...updatedActive };
+                }
+            }
         });
 
         // fetchPendingRequests
@@ -264,10 +295,16 @@ const chatSlice = createSlice({
 
         // sendRequest
         builder.addCase(sendRequest.fulfilled, (state, action) => {
+            const { receiverId } = action.payload;
             state.notification = { msg: 'Chat request sent successfully!', type: 'info' };
-            if (state.activeUser && state.activeUser._id === action.payload.receiverId) {
-                state.activeUser.requestStatus = 'pending_sent';
+            const rId = String(receiverId);
+
+            if (state.activeUser && String(state.activeUser._id || state.activeUser.id) === rId) {
+                state.activeUser = { ...state.activeUser, requestStatus: 'pending_sent' };
             }
+            state.users = state.users.map((u) =>
+                String(u._id || u.id) === rId ? { ...u, requestStatus: 'pending_sent' } : u
+            );
         });
         builder.addCase(sendRequest.rejected, (state, action) => {
             state.notification = { msg: action.payload || 'Failed to send request', type: 'error' };
@@ -280,9 +317,14 @@ const chatSlice = createSlice({
                 msg: `Request ${act === 'accept' ? 'accepted' : 'declined'}!`,
                 type: 'info'
             };
-            if (state.activeUser && state.activeUser._id === targetUserId) {
-                state.activeUser.requestStatus = status;
+            const tId = String(targetUserId);
+
+            if (state.activeUser && String(state.activeUser._id || state.activeUser.id) === tId) {
+                state.activeUser = { ...state.activeUser, requestStatus: status };
             }
+            state.users = state.users.map((u) =>
+                String(u._id || u.id) === tId ? { ...u, requestStatus: status } : u
+            );
         });
         builder.addCase(respondRequest.rejected, (state, action) => {
             state.notification = { msg: action.payload || 'Failed to respond to request', type: 'error' };

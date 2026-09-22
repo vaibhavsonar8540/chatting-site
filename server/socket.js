@@ -63,18 +63,19 @@ const initSocket = (server, clientUrl) => {
         // Register user socket room
         socket.on('register_user', (userId) => {
             if (!userId) return;
-            socket.userId = userId;
-            socket.join(`user_${userId}`);
-            onlineUsers.set(userId, socket.id);
+            const strUserId = userId.toString();
+            socket.userId = strUserId;
+            socket.join(`user_${strUserId}`);
+            onlineUsers.set(strUserId, socket.id);
 
             // Broadcast online status to all
             io.emit('user_status_change', {
-                userId,
+                userId: strUserId,
                 isOnline: true,
                 onlineUsers: Array.from(onlineUsers.keys())
             });
 
-            console.log(`👤 User registered to socket room: user_${userId}`);
+            console.log(`👤 User registered to socket room: user_${strUserId}`);
         });
 
         // Send real-time message
@@ -86,11 +87,14 @@ const initSocket = (server, clientUrl) => {
                     return socket.emit('error_message', { message: 'Invalid message payload' });
                 }
 
+                const sId = senderId.toString();
+                const rId = receiverId.toString();
+
                 // Check if connection is accepted
                 const request = await Request.findOne({
                     $or: [
-                        { sender: senderId, receiver: receiverId },
-                        { sender: receiverId, receiver: senderId }
+                        { sender: sId, receiver: rId },
+                        { sender: rId, receiver: sId }
                     ],
                     status: 'accepted'
                 });
@@ -103,27 +107,27 @@ const initSocket = (server, clientUrl) => {
 
                 // Save message to MongoDB
                 const newMessage = await Message.create({
-                    sender: senderId,
-                    receiver: receiverId,
+                    sender: sId,
+                    receiver: rId,
                     text: text.trim()
                 });
 
                 const formattedMsg = {
-                    _id: newMessage._id,
-                    sender: newMessage.sender,
-                    receiver: newMessage.receiver,
+                    _id: newMessage._id.toString(),
+                    sender: newMessage.sender.toString(),
+                    receiver: newMessage.receiver.toString(),
                     text: newMessage.text,
                     read: newMessage.read,
                     createdAt: newMessage.createdAt
                 };
 
                 // Emit to sender and receiver rooms
-                io.to(`user_${senderId}`).emit('receive_message', formattedMsg);
-                io.to(`user_${receiverId}`).emit('receive_message', formattedMsg);
+                io.to(`user_${sId}`).emit('receive_message', formattedMsg);
+                io.to(`user_${rId}`).emit('receive_message', formattedMsg);
 
                 // Notify receiver about new unread / latest message
-                io.to(`user_${receiverId}`).emit('new_message_notification', {
-                    senderId,
+                io.to(`user_${rId}`).emit('new_message_notification', {
+                    senderId: sId,
                     message: formattedMsg
                 });
 
@@ -135,24 +139,32 @@ const initSocket = (server, clientUrl) => {
 
         // Send chat request
         socket.on('send_request_event', ({ senderId, receiverId }) => {
-            io.to(`user_${receiverId}`).emit('incoming_request', { senderId });
-            io.to(`user_${senderId}`).emit('request_updated', { receiverId, status: 'pending_sent' });
+            if (!receiverId) return;
+            const rId = receiverId.toString();
+            const sId = senderId ? senderId.toString() : '';
+            io.to(`user_${rId}`).emit('incoming_request', { senderId: sId });
+            io.to(`user_${sId}`).emit('request_updated', { receiverId: rId, status: 'pending_sent' });
         });
 
         // Respond chat request (accept / reject)
         socket.on('respond_request_event', ({ senderId, receiverId, action }) => {
+            if (!senderId || !receiverId) return;
+            const sId = senderId.toString();
+            const rId = receiverId.toString();
             const status = action === 'accept' ? 'accepted' : 'rejected';
-            io.to(`user_${senderId}`).emit('request_response', { responderId: receiverId, action, status });
-            io.to(`user_${receiverId}`).emit('request_response', { responderId: senderId, action, status });
+            io.to(`user_${sId}`).emit('request_response', { responderId: rId, action, status });
+            io.to(`user_${rId}`).emit('request_response', { responderId: sId, action, status });
         });
 
         // Typing indicators
         socket.on('typing', ({ senderId, receiverId }) => {
-            io.to(`user_${receiverId}`).emit('user_typing', { senderId });
+            if (!receiverId) return;
+            io.to(`user_${receiverId.toString()}`).emit('user_typing', { senderId: senderId ? senderId.toString() : '' });
         });
 
         socket.on('stop_typing', ({ senderId, receiverId }) => {
-            io.to(`user_${receiverId}`).emit('user_stop_typing', { senderId });
+            if (!receiverId) return;
+            io.to(`user_${receiverId.toString()}`).emit('user_stop_typing', { senderId: senderId ? senderId.toString() : '' });
         });
 
         // Disconnect
