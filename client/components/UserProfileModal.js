@@ -109,34 +109,6 @@ export default function UserProfileModal({
                         </div>
                     </div>
 
-                    {targetUser.email && (
-                        <div className="detail-item">
-                            <div className="detail-icon">
-                                <Mail size={16} />
-                            </div>
-                            <div className="detail-content">
-                                <span className="detail-label">Email Address</span>
-                                <span className="detail-value">{targetUser.email}</span>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="detail-item">
-                        <div className="detail-icon">
-                            {isOnline ? <Wifi size={16} style={{ color: '#059669' }} /> : <WifiOff size={16} />}
-                        </div>
-                        <div className="detail-content">
-                            <span className="detail-label">Online Status</span>
-                            <span className="detail-value">
-                                {isOnline ? (
-                                    <span style={{ color: '#059669', fontWeight: 600 }}>Active Online Now</span>
-                                ) : (
-                                    <span style={{ color: 'var(--text-muted)' }}>Offline</span>
-                                )}
-                            </span>
-                        </div>
-                    </div>
-
                     {targetUser.createdAt && (
                         <div className="detail-item">
                             <div className="detail-icon">

@@ -115,24 +115,13 @@ export default function ChatWindow({
 
     if (!activeUser) {
         return (
-            <div className="chat-empty-state">
-                <div className="empty-state-glow"></div>
-                <div className="empty-state-icon">
-                    <Sparkles size={48} className="sparkle-icon" />
-                </div>
-                <h2>Select a Chat to Start Messaging</h2>
-                <p>Real-time end-to-end messaging with WebSocket speed and request authorization.</p>
-                
-                <div className="features-badge-list">
-                    <div className="feature-badge">
-                        <Lock size={14} /> Request-based Messaging
+            <div className="chat-window chat-empty-wrapper">
+                <div className="chat-empty-state">
+                    <div className="empty-state-glow"></div>
+                    <div className="empty-state-icon">
+                        <Sparkles size={44} className="sparkle-icon" />
                     </div>
-                    <div className="feature-badge">
-                        <Circle size={8} fill="#10b981" color="#10b981" /> Live Online Status
-                    </div>
-                    <div className="feature-badge">
-                        <Clock size={14} /> Message History Stored
-                    </div>
+                    <h2>Select a Chat to Start Messaging</h2>
                 </div>
             </div>
         );
@@ -155,7 +144,6 @@ export default function ChatWindow({
                         aria-label="Back to conversations"
                     >
                         <ArrowLeft size={18} />
-                        <span className="back-btn-text">Back</span>
                     </button>
 
                     <div 
@@ -186,15 +174,6 @@ export default function ChatWindow({
                 </div>
 
                 <div className="header-actions">
-                    <button 
-                        onClick={() => onOpenProfile && onOpenProfile(activeUser)} 
-                        className="icon-btn-profile" 
-                        title="View User Profile"
-                        style={{ marginRight: '0.25rem' }}
-                    >
-                        <User size={18} />
-                    </button>
-
                     {canChat && (
                         <span className="badge badge-success">
                             <UserCheck size={13} /> Connected

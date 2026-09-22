@@ -42,6 +42,17 @@ export default function ChatDashboard() {
         }
     }, [dispatch, token]);
 
+    // Auto-select first connected friend on desktop if no active chat is selected
+    useEffect(() => {
+        if (!activeUser && users.length > 0) {
+            const firstFriend = users.find((u) => u.requestStatus === 'accepted');
+            if (firstFriend && typeof window !== 'undefined' && window.innerWidth > 768) {
+                dispatch(setActiveUser(firstFriend));
+                dispatch(fetchMessages(firstFriend._id));
+            }
+        }
+    }, [users, activeUser, dispatch]);
+
     // Select user handler
     const handleSelectUser = (selectedUser) => {
         dispatch(setActiveUser(selectedUser));
